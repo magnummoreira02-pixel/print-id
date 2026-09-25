@@ -26,6 +26,13 @@ export default function Config(){
     if(list.length && !config.impressora) setConfig({impressora:list.find(p=>/zebra|zdesigner/i.test(p))||list[0]})
   }
 
+  async function testConnection(){
+    const list = await listPrinters()
+    if(!config.impressora) return alert('Selecione uma impressora.')
+    if(list.includes(config.impressora)) alert(`Impressora encontrada no spooler: ${config.impressora}`)
+    else alert('A impressora selecionada não está disponível no spooler do Windows. Clique em "Detectar impressoras".')
+  }
+
   function genZPL(){
     const exampleRow:Record<string,any>={}; headers.forEach(h=> exampleRow[h]='EXEMPLO'); if(headers.length===0) exampleRow['ID']='12345'
     if(headers.includes('ID')) exampleRow['ID']='RM-001'
@@ -122,7 +129,7 @@ export default function Config(){
               <label>Offset Y mm<input type="number" step="0.5" value={config.offsetY} onChange={e=>setConfig({offsetY:parseFloat(e.target.value)||0})}/></label>
             </div>
             <div className="row gap">
-              <button className="btn outline" onClick={()=>alert('Conexão OK (simulado)')}>Testar conexão</button>
+              <button className="btn outline" onClick={testConnection}>Testar conexão</button>
               <button className="btn lime" onClick={testPrint}>Imprimir etiqueta de teste</button>
               <button className="btn outline" onClick={()=>alert('Comando ~JC enviado (calibrar mídia)')}>Calibrar mídia (~JC)</button>
             </div>
