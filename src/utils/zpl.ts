@@ -31,12 +31,20 @@ export function buildZPL(model: LabelModel, rows: Record<string,any>[], dpi: num
         const fieldVal = resolveField(el, row)
         if(el.type==='text'){
           const hDots = mmToDots((el.fontSize||3)*0.3528, dpiNum) // aproximado
-          z+=`^FO${fx},${fy}^A0N,${Math.round(hDots)},${Math.round(hDots)}^FD${escapeZPL(fieldVal)}^FS\n`
+          const orientation = zplOrientation(el.rotation)
+          const font = el.bold ? 'A0' : 'A0'
+          z+=`^FO${fx},${fy}^${font}${orientation},${Math.round(hDots)},${Math.round(hDots)}^FD${escapeZPL(fieldVal)}^FS\n`
         } else if(el.type==='qrcode'){
           const mag = Math.max(2, Math.round(fw/30))
           z+=`^FO${fx},${fy}^BQN,2,${mag}^FDLA,${escapeZPL(fieldVal)}^FS\n`
         } else if(el.type==='code128'){
           z+=`^FO${fx},${fy}^BCN,${fh},Y,N,A^FD${escapeZPL(fieldVal)}^FS\n`
+        } else if(el.type==='code39'){
+          z+=`^FO${fx},${fy}^B3N,N,${fh},Y,N^FD${escapeZPL(fieldVal)}^FS\n`
+        } else if(el.type==='datamatrix'){
+          z+=`^FO${fx},${fy}^BXN,${Math.max(4, Math.round(fw/24))},200^FD${escapeZPL(fieldVal)}^FS\n`
+        } else if(el.type==='ean13'){
+          z+=`^FO${fx},${fy}^BEN,${fh},Y,N^FD${escapeZPL(fieldVal)}^FS\n`
         } else if(el.type==='rect'){
           z+=`^FO${fx},${fy}^GB${fw},${fh},${el.thickness||1}^FS\n`
         } else if(el.type==='line'){
@@ -59,8 +67,18 @@ export function pageSizeCalc(m:LabelModel){
   return {w,h}
 }
 function resolveField(el:LabelElement, row:Record<string,any>){
-  if(!el.field) return el.text||''
-  if(el.field.startsWith('"') && el.field.endsWith('"')) return el.field.slice(1,-1)
-  return String(row[el.field] ?? el.text ?? '')
+  let value = ''
+  if(!el.field) value = el.text||''
+  else if(el.field.startsWith('"') && el.field.endsWith('"')) value = el.field.slice(1,-1)
+  else value = String(row[el.field] ?? el.text ?? '')
+  return `${el.prefix || ''}${value}`
 }
 function escapeZPL(s:string){ return s.replace(/[\^~]/g,' ') }
+
+function zplOrientation(rotation:number|undefined){
+  const normalized = ((rotation||0)%360+360)%360
+  if(normalized===90) return 'R'
+  if(normalized===180) return 'I'
+  if(normalized===270) return 'B'
+  return 'N'
+}

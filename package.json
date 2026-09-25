@@ -14,8 +14,12 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@types/qrcode": "^1.5.6",
+    "konva": "^9.3.18",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-konva": "^18.2.10",
     "xlsx": "^0.18.5",
     "zustand": "^4.5.5"
   },
@@ -23,20 +27,33 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
     "electron": "^32.2.0",
     "electron-builder": "^24.13.3",
     "typescript": "^5.6.3",
     "vite": "^5.4.19",
     "vitest": "^2.1.9",
-    "concurrently": "^9.1.2",
     "wait-on": "^8.0.1"
   },
   "build": {
     "appId": "com.printid.etiquetas",
     "productName": "Print ID – Etiquetas",
-    "directories": { "output": "release" },
-    "files": ["dist/**/*", "dist-electron/**/*", "package.json"],
-    "win": { "target": "nsis", "icon": "public/icon.ico" },
-    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true }
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
   }
 }

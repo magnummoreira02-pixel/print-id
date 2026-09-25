@@ -1,13 +1,15 @@
 import { useState } from 'react'
+import { useEffect } from 'react'
+import QRCode from 'qrcode'
 import { useStore, LabelModel } from '../store/useStore'
 import { pageSizeCalc, buildZPL } from '../utils/zpl'
 import { listPrinters, printZPL } from '../services/printer'
 import LabelEditor from './LabelEditor'
 
 export default function Config(){
-  const { headers, colunaChave, setColunaChave, modelos, modeloAtivoId, setModeloAtivo, setModelos, config, setConfig, impressaoAutomatica, setImpressaoAutomatica } = useStore()
+  const { headers, rows, colunaChave, setColunaChave, modelos, modeloAtivoId, setModeloAtivo, setModelos, config, setConfig, impressaoAutomatica, setImpressaoAutomatica } = useStore()
   const modelo = modelos.find(m=>m.id===modeloAtivoId) || modelos[0]
-  const [showEditor, setShowEditor] = useState(false)
+  const [editingModel, setEditingModel] = useState<LabelModel|null>(null)
   const [printers, setPrinters] = useState<string[]>([])
   const [zplPreview, setZplPreview] = useState('')
   const [showZPL, setShowZPL] = useState(false)
@@ -32,6 +34,12 @@ export default function Config(){
     return z
   }
 
+  async function testDraft(draftModel: LabelModel, elements: LabelModel['elementos'], row: Record<string, any>, patch: Partial<LabelModel> = {}){
+    const draft = {...draftModel, ...patch, elementos: elements}
+    const z = buildZPL(draft, [row], config.dpi, {offsetX:config.offsetX, offsetY:config.offsetY, velocidade:config.velocidade, densidade:config.densidade})
+    try{ await printZPL(z, config.impressora, {ip:config.ip, port:config.porta, conexao:config.conexao}); alert('Etiqueta do registro enviada!') }catch(e:any){ alert('Erro: '+e.message) }
+  }
+
   async function testPrint(){
     const z=genZPL()
     try{ await printZPL(z, config.impressora, {ip:config.ip, port:config.porta, conexao:config.conexao}); alert('Etiqueta de teste enviada!')}catch(e:any){ alert('Erro: '+e.message)}
@@ -51,7 +59,7 @@ export default function Config(){
                   <div><b>{m.nome}</b><small>{m.largura} × {m.altura} mm • {m.elementos.length} elementos</small></div>
                   {m.id===modeloAtivoId && <span className="badge lime">ATIVO</span>}
                   <div className="model-actions">
-                    <button onClick={(e)=>{e.stopPropagation(); setShowEditor(true)}} title="Editar">✎</button>
+                    <button onClick={(e)=>{e.stopPropagation(); setEditingModel(m)}} title="Editar">✎</button>
                     <button onClick={(e)=>{e.stopPropagation(); const n={...m, id:Date.now().toString(), nome:m.nome+' (cópia)', ativo:false}; setModelos([...modelos,n])}} title="Duplicar">⎘</button>
                     <button onClick={(e)=>{e.stopPropagation(); const blob=new Blob([JSON.stringify(m,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=m.nome+'.json'; a.click()}} title="Exportar">⤓</button>
                     <button onClick={(e)=>{e.stopPropagation(); if(modelos.length===1) return alert('Mantenha ao menos 1 modelo'); if(confirm('Excluir?')) setModelos(modelos.filter(x=>x.id!==m.id))}} title="Excluir">×</button>
@@ -91,7 +99,7 @@ export default function Config(){
             <div className="calc">Formato de página: <b>{calc.w.toFixed(1)} × {calc.h.toFixed(1)} mm</b> • Modelo: {modelo.largura} × {modelo.altura} mm</div>
             <div className="row gap">
               <input placeholder="Renomear modelo" value={modelo.nome} onChange={e=>updateModelo({nome:e.target.value})} style={{flex:1}}/>
-              <button className="btn outline" onClick={()=>setShowEditor(true)}>Editar layout</button>
+              <button className="btn outline" onClick={()=>setEditingModel(modelo)}>Editar layout</button>
             </div>
           </section>
 
@@ -164,20 +172,20 @@ export default function Config(){
               <button className="btn small" onClick={genZPL}>↻ Atualizar</button>
             </div>
             <div className="preview-stage">
-              <PreviewEtiqueta modelo={modelo} headers={headers}/>
+              <PreviewEtiqueta modelo={modelo} headers={headers} row={rows[0]}/>
             </div>
             <button className="btn lime full" onClick={testPrint}>Testar impressão</button>
           </div>
         </div>
       </div>
 
-      {showEditor && <LabelEditor modelo={modelo} headers={headers} onClose={()=>setShowEditor(false)} onSave={(els)=>{ updateModelo({elementos:els}); setShowEditor(false)}}/>}
+      {editingModel && <LabelEditor modelo={editingModel} headers={Array.from(new Set([...headers, ...rows.flatMap(row=>Object.keys(row))]))} rows={rows} onClose={()=>setEditingModel(null)} onSave={(els,patch)=>{ setModelos(modelos.map(m=>m.id===editingModel.id?{...m, ...patch, elementos:els}:m)); setEditingModel(null) }} onTestPrint={(els,row,patch)=>testDraft(editingModel,els,row,patch)}/>} 
     </div>
   )
 }
 
-function PreviewEtiqueta({modelo, headers}:{modelo:LabelModel, headers:string[]}){
-  const example:Record<string,any>={}
+function PreviewEtiqueta({modelo, headers, row}:{modelo:LabelModel, headers:string[], row?:Record<string,any>}){
+  const example:Record<string,any>={...row}
   headers.forEach(h=> example[h]=h==='ID'?'RM-12345': h.slice(0,8))
   if(!headers.length) example['ID']='RM-001'
   // render escala: 4px por mm
@@ -189,7 +197,7 @@ function PreviewEtiqueta({modelo, headers}:{modelo:LabelModel, headers:string[]}
           {modelo.elementos.map(el=>{
             const val = el.field?.startsWith('"')? el.field.slice(1,-1) : (example[el.field||''] ?? el.text ?? el.field ?? '')
             const style:any={ position:'absolute', left:el.x*scale, top:el.y*scale, width:el.w*scale, height:el.h*scale, fontSize:(el.fontSize||6)*1.2, fontWeight:el.bold?'700':'400', textAlign:el.align||'left', border: el.type==='rect'? `${el.thickness||1}px solid #000` : undefined, overflow:'hidden', display:'flex', alignItems:'center', justifyContent: el.align==='center'?'center': el.align==='right'?'flex-end':'flex-start', wordBreak:'break-all' as const }
-            if(el.type==='qrcode') return <div key={el.id} style={style}>▣ QR:{String(val).slice(0,10)}</div>
+            if(el.type==='qrcode') return <QrPreview key={el.id} value={`${el.prefix||''}${String(val)}`} style={style}/>
             if(el.type==='rect' || el.type==='line') return <div key={el.id} style={style}/>
             return <div key={el.id} style={style}>{String(val)}</div>
           })}
@@ -197,4 +205,10 @@ function PreviewEtiqueta({modelo, headers}:{modelo:LabelModel, headers:string[]}
       ))}
     </div>
   )
+}
+
+function QrPreview({value, style}:{value:string, style:React.CSSProperties}){
+  const [src, setSrc] = useState('')
+  useEffect(()=>{ QRCode.toDataURL(value || ' ', {margin:0, errorCorrectionLevel:'M'}).then(setSrc).catch(()=>setSrc('')) },[value])
+  return src ? <img src={src} alt="QR Code" style={{...style, objectFit:'contain'}}/> : <div style={style}>QR</div>
 }

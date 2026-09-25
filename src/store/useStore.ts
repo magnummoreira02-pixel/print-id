@@ -8,8 +8,14 @@ export type LabelElement = {
   rotation?: number
   field?: string // coluna vinculada ou texto fixo se começa com "
   text?: string
-  fontSize?: number; bold?: boolean; align?: 'left'|'center'|'right'
+  prefix?: string
+  fontFamily?: string
+  fontSize?: number; bold?: boolean; italic?: boolean; underline?: boolean
+  align?: 'left'|'center'|'right'
+  color?: string
   thickness?: number
+  locked?: boolean
+  hidden?: boolean
 }
 
 export type LabelModel = {
