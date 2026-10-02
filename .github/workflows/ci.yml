@@ -12,9 +12,9 @@ jobs:
       # o app só é empacotado localmente; no CI basta checar tipos e lint
       ELECTRON_SKIP_BINARY_DOWNLOAD: 1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
