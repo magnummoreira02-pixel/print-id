@@ -1,0 +1,18 @@
+# dependências e builds
+node_modules
+dist
+out
+.eslintcache
+
+# logs
+logs
+*.log*
+
+# dados reais (matrizes de ensaio não vão para o repositório)
+Matriz.xlsx
+*.xlsx
+!docs/exemplos/*.xlsx
+
+# sistema
+.DS_Store
+Thumbs.db
