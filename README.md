@@ -8,13 +8,16 @@ O fluxo de uso é simples:
 2. Na tela de **Bipagem**, o operador lê um código de barras com o leitor.
 3. O app encontra todas as linhas daquele ID (normalmente 5 — uma por local) e **imprime as etiquetas automaticamente**.
 
-![Modelo da etiqueta impressa](./modelo%20impressao.png)
+![Modelo da etiqueta impressa](<./modelo impressao.png>)
+
+_A etiqueta física que o app imprime._
 
 ---
 
 ## Sumário
 
 - [Começando](#começando)
+- [As telas](#as-telas)
 - [Como o app funciona](#como-o-app-funciona)
 - [Scripts disponíveis](#scripts-disponíveis)
 - [Onde ficam os dados](#onde-ficam-os-dados)
@@ -44,6 +47,43 @@ Na primeira execução não há matriz importada. Para testar sem dados reais, i
 
 > A matriz real (`Matriz.xlsx`) **não está no repositório** — são dados de cliente.
 > Peça o arquivo para o responsável do projeto e deixe-o na raiz (já está no `.gitignore`).
+
+---
+
+## As telas
+
+### Bipagem (`F1`)
+
+O operador bipa o código, o app encontra as linhas daquele ID e imprime. O painel da direita conta
+os bips da sessão.
+
+![Tela de bipagem](docs/imagens/bipagem.png)
+
+> No print acima a impressão automática está desligada — por isso aparece o botão
+> **Imprimir etiquetas**. Com ela ligada, a impressão sai sozinha assim que o ID é encontrado.
+
+### Dados (`F2`)
+
+A matriz importada, com busca em todas as colunas, ordenação, paginação e edição por duplo clique
+na célula. Dá para exportar de volta para `.xlsx` ou `.csv`.
+
+![Tela de dados](docs/imagens/dados.png)
+
+### Configurações (`F3`)
+
+Impressora, modelos de etiqueta, tamanho da etiqueta, cópias por linha, coluna de bipagem e dados do
+sistema. A coluna da direita mostra a **prévia real** — o mesmo HTML que é enviado à impressora.
+
+![Tela de configurações](docs/imagens/configuracoes.png)
+
+### Editor de etiquetas
+
+Acessado em Configurações → Modelos → editar. Os elementos são posicionados em milímetros, arrastando
+no canvas; o painel da direita edita o elemento selecionado.
+
+![Editor visual de etiquetas](docs/imagens/editor-etiqueta.png)
+
+O modelo padrão é a réplica da etiqueta física mostrada no topo deste README.
 
 ---
 
