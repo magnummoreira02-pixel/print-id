@@ -137,20 +137,45 @@ async function labelBody(
   return `<div class="label">${pieces.join('')}</div>`
 }
 
+export function sheetLayout(labelCount: number): { columns: number; rows: number } {
+  const columns = Math.min(2, Math.max(1, labelCount))
+  return {
+    columns,
+    rows: Math.max(1, Math.ceil(labelCount / columns))
+  }
+}
+
 export async function buildLabelsHtml(
   rows: MatrixRow[],
   template: LabelTemplate,
   headers: string[]
 ): Promise<string> {
   const bodies = await Promise.all(rows.map((r) => labelBody(r, template, headers)))
+  const layout = sheetLayout(rows.length || 1)
+  const sheetWidthMm = template.widthMm * layout.columns
+  const sheetHeightMm = template.heightMm * layout.rows
+
   return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  @page { size: ${mm(template.widthMm)} ${mm(template.heightMm)}; margin: 0; }
+  @page { size: ${mm(sheetWidthMm)} ${mm(sheetHeightMm)}; margin: 0; }
   html, body { background: #fff; }
+  body {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+  }
+  .sheet {
+    display: grid;
+    grid-template-columns: repeat(${layout.columns}, ${mm(template.widthMm)});
+    grid-template-rows: repeat(${layout.rows}, ${mm(template.heightMm)});
+    width: ${mm(sheetWidthMm)};
+    height: ${mm(sheetHeightMm)};
+    break-after: page;
+  }
   .label {
     position: relative;
     width: ${mm(template.widthMm)};
@@ -158,13 +183,11 @@ export async function buildLabelsHtml(
     overflow: hidden;
     font-family: Arial, Helvetica, sans-serif;
     color: #000;
-    page-break-after: always;
-    break-after: page;
   }
 </style>
 </head>
 <body>
-${bodies.join('\n')}
+<div class="sheet">${bodies.join('\n')}</div>
 </body>
 </html>`
 }

@@ -208,8 +208,9 @@ async function doImport(): Promise<void> {
     page.value = 1
     const count = result.payload?.meta.rowCount ?? 0
     toast.success(`Matriz importada: ${nf.format(count)} linhas.`)
-  } catch {
-    toast.error('Erro inesperado ao importar a matriz.')
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error)
+    toast.error(`Erro inesperado ao importar a matriz: ${detail}`)
   } finally {
     importing.value = false
   }

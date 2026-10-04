@@ -54,7 +54,25 @@ function normalizeCell(value: unknown): CellValue {
 function buildHeaders(headerRow: unknown[], dataRows: unknown[][]): string[] {
   // A largura real considera também as linhas de dados: colunas com valores
   // mas sem célula de cabeçalho recebem o placeholder "Coluna N"
-  const width = Math.max(headerRow.length, ...dataRows.map((r) => r.length), 0)
+  let maxDataWidth = headerRow.length
+  for (let i = 0; i < Math.min(dataRows.length, 100000); i++) {
+    const len = dataRows[i].length
+    if (len > maxDataWidth) maxDataWidth = len
+  }
+  // Se houver muitas linhas, evita spread em array gigante (stack)
+  if (dataRows.length > 100000) {
+    // já calculado até 100000; se ainda houver colunas além, assume largura do header + dados vistos
+    for (let i = 100000; i < dataRows.length && dataRows[i].length > maxDataWidth; i++) {
+      maxDataWidth = dataRows[i].length
+      if (maxDataWidth > 5000) break
+    }
+  } else {
+    for (let i = 0; i < dataRows.length; i++) {
+      const len = dataRows[i].length
+      if (len > maxDataWidth) maxDataWidth = len
+    }
+  }
+  const width = Math.max(headerRow.length, maxDataWidth, 0)
   const headers: string[] = []
   const seen = new Set<string>()
   for (let i = 0; i < width; i++) {
@@ -70,11 +88,14 @@ function buildHeaders(headerRow: unknown[], dataRows: unknown[][]): string[] {
     headers.push(unique)
   }
   // remove colunas do final que não têm cabeçalho NEM nenhum dado
-  const columnHasData = (i: number): boolean =>
-    dataRows.some((r) => {
-      const v = r[i]
-      return v !== null && v !== undefined && String(v).trim() !== ''
-    })
+  const columnHasData = (i: number): boolean => {
+    const limit = Math.min(dataRows.length, 50000)
+    for (let k = 0; k < limit; k++) {
+      const v = dataRows[k][i]
+      if (v !== null && v !== undefined && String(v).trim() !== '') return true
+    }
+    return false
+  }
   while (headers.length > 0) {
     const last = headers.length - 1
     const headerEmpty = String(headerRow[last] ?? '').trim() === ''
@@ -106,24 +127,37 @@ export function parseMatrixFile(filePath: string): ParsedMatrix {
   const ext = extname(filePath).toLowerCase()
   let arrays: unknown[][]
 
-  if (ext === '.csv' || ext === '.txt') {
-    const text = decodeCsvBuffer(readFileSync(filePath))
-    // Sem dynamicTyping: a conversão numérica segura fica em normalizeCell,
-    // que preserva zeros à esquerda e notação exponencial como texto
-    const result = Papa.parse<string[]>(text, { skipEmptyLines: 'greedy' })
-    if (result.errors.length > 0 && result.data.length === 0) {
-      throw new Error(`Falha ao ler CSV: ${result.errors[0].message}`)
+  try {
+    if (ext === '.csv' || ext === '.txt') {
+      const text = decodeCsvBuffer(readFileSync(filePath))
+      // Sem dynamicTyping: a conversão numérica segura fica em normalizeCell,
+      // que preserva zeros à esquerda e notação exponencial como texto
+      const result = Papa.parse<string[]>(text, { skipEmptyLines: 'greedy' })
+      if (result.errors.length > 0 && result.data.length === 0) {
+        throw new Error(`Falha ao ler CSV: ${result.errors[0].message}`)
+      }
+      arrays = result.data
+    } else if (ext === '.xls' || ext === '.xlsx') {
+      const wb = XLSX.read(readFileSync(filePath), { type: 'buffer', cellDates: true })
+      if (!wb.SheetNames || wb.SheetNames.length === 0) {
+        throw new Error('A planilha não contém abas.')
+      }
+      const sheetName = wb.SheetNames[0]
+      const ws = wb.Sheets[sheetName]
+      if (!ws) throw new Error('A planilha não contém abas.')
+      arrays = XLSX.utils.sheet_to_json(ws, {
+        header: 1,
+        raw: true,
+        defval: null
+      }) as unknown[][]
+    } else {
+      throw new Error('Formato não suportado. Use CSV, XLS ou XLSX.')
     }
-    arrays = result.data
-  } else {
-    const wb = XLSX.read(readFileSync(filePath), { type: 'buffer', cellDates: true })
-    const sheetName = wb.SheetNames[0]
-    if (!sheetName) throw new Error('A planilha não contém abas.')
-    arrays = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {
-      header: 1,
-      raw: true,
-      defval: null
-    }) as unknown[][]
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(error.message)
+    }
+    throw error
   }
 
   if (arrays.length < 2) {

@@ -38,19 +38,20 @@ function getPayload(store: MatrixStore): MatrixPayload | null {
 
 export function registerIpc({ store, settings, getMainWindow }: IpcContext): void {
   ipcMain.handle('matrix:import', async (): Promise<ImportResult> => {
-    const win = getMainWindow()
-    if (!win) return { ok: false, error: 'Janela principal indisponível.' }
-    const picked = await dialog.showOpenDialog(win, {
-      title: 'Importar matriz',
-      properties: ['openFile'],
-      filters: [
-        { name: 'Planilhas', extensions: ['xlsx', 'xls', 'csv'] },
-        { name: 'Todos os arquivos', extensions: ['*'] }
-      ]
-    })
-    if (picked.canceled || picked.filePaths.length === 0) return { ok: false, canceled: true }
-    const filePath = picked.filePaths[0]
     try {
+      const win = getMainWindow()
+      if (!win) return { ok: false, error: 'Janela principal indisponível.' }
+      const picked = await dialog.showOpenDialog(win, {
+        title: 'Importar matriz',
+        properties: ['openFile'],
+        filters: [
+          { name: 'Planilhas', extensions: ['xlsx', 'xls', 'csv'] },
+          { name: 'Todos os arquivos', extensions: ['*'] }
+        ]
+      })
+      if (picked.canceled || picked.filePaths.length === 0) return { ok: false, canceled: true }
+
+      const filePath = picked.filePaths[0]
       const { headers, rows } = parseMatrixFile(filePath)
       const saved = settings.get().scanColumn
       const scanColumn = saved && headers.includes(saved) ? saved : detectScanColumn(headers)

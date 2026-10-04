@@ -40,15 +40,15 @@ const api: BitredApi = {
 }
 
 if (process.contextIsolated) {
+  contextBridge.exposeInMainWorld('api', api)
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
   } catch (error) {
-    console.error(error)
+    console.error('Falha ao expor a API auxiliar do Electron:', error)
   }
 } else {
   // @ts-ignore (define in dts)
-  window.electron = electronAPI
-  // @ts-ignore (define in dts)
   window.api = api
+  // @ts-ignore (define in dts)
+  window.electron = electronAPI
 }

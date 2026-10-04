@@ -122,27 +122,36 @@ As funções são irmãs: `elementStyle`, `fieldValue`, `qrValue`, `resolveField
     box-sizing: border-box;
   }
   @page {
-    size: 50mm 25mm;
+    size: 100mm 50mm;
     margin: 0;
+  }
+  .sheet {
+    display: grid;
+    grid-template-columns: repeat(2, 50mm);
+    grid-template-rows: repeat(2, 25mm);
   }
   .label {
     position: relative;
     width: 50mm;
     height: 25mm;
     overflow: hidden;
-    page-break-after: always;
   }
 </style>
-<div class="label">
-  <div style="position:absolute;left:35.600mm;top:20.600mm;font-size:3.000mm;...">6000</div>
-  ...
+<div class="sheet">
+  <div class="label">...</div>
+  <div class="label">...</div>
+  <div class="label">...</div>
+  <div class="label">...</div>
 </div>
 ```
 
 - `box-sizing: border-box` para que a borda não empurre as medidas (o editor herda o mesmo
   comportamento do preflight do Tailwind).
+- Quando há mais de uma etiqueta, a página usa grade de 2 colunas por padrão para caber melhor
+  em folhas térmicas com 2 x N registros.
 - Medidas em mm com 3 decimais — o driver converte para pontos, e arredondar antes causa deriva.
-- `page-break-after: always` em cada `.label`: uma etiqueta por página.
+- A página impressa usa uma grade de 2 colunas e repete as linhas conforme a quantidade de
+  etiquetas, mantendo cada unidade no mesmo tamanho do modelo.
 - QR vai como `data:image/png` embutido (`qrcode` no main), com `image-rendering: pixelated` para não
   borrar na térmica.
 

@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { writeFileSync, unlink } from 'fs'
 import type { PrinterInfo, PrintResult } from '../shared/types'
+import { sheetLayout } from './labels'
 
 export async function listPrinters(win: BrowserWindow): Promise<PrinterInfo[]> {
   const printers = await win.webContents.getPrintersAsync()
@@ -46,6 +47,11 @@ export async function printHtml(
   })
 
   const copies = Math.max(1, job.copies)
+  const sheet = sheetLayout(Math.max(1, labelCount))
+  const pageSize = {
+    width: Math.round(job.widthMm * sheet.columns * 1000),
+    height: Math.round(job.heightMm * sheet.rows * 1000)
+  }
   const baseOptions: Electron.WebContentsPrintOptions = {
     silent: true,
     deviceName: job.printerName,
@@ -59,10 +65,7 @@ export async function printHtml(
       const options = withPageSize
         ? {
             ...baseOptions,
-            pageSize: {
-              width: Math.round(job.widthMm * 1000),
-              height: Math.round(job.heightMm * 1000)
-            }
+            pageSize
           }
         : baseOptions
       win.webContents.print(options, (success, failureReason) => {
